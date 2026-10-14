@@ -1,0 +1,332 @@
+<div class="app-layout">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav glass-panel">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">Enterprise MCP Studio</span>
+        <span class="brand-subtitle">Spring AI &bull; Spring Boot MCP &bull; MySQL</span>
+      </div>
+    </div>
+
+    <div class="nav-status-indicators">
+      <!-- Spring AI Status -->
+      <div class="status-pill" [class.status-online]="healthStatus?.status === 'UP'">
+        <span class="pulse-dot"></span>
+        <span class="status-label">Spring AI (:8090)</span>
+      </div>
+
+      <!-- Gemini Model -->
+      <div class="status-pill status-pill-accent">
+        <svg class="pill-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        </svg>
+        <span class="status-label">{{ healthStatus?.geminiModel || 'gemini-3.1-flash-lite' }}</span>
+      </div>
+
+      <!-- Spring Boot MCP Server Status -->
+      <div class="status-pill" [class.status-online]="healthStatus?.mcpServerPing?.status === 'healthy'">
+        <span class="pulse-dot"></span>
+        <span class="status-label">Spring Boot MCP (:8085)</span>
+      </div>
+
+      <!-- Database Status -->
+      <div class="status-pill status-pill-db">
+        <span class="status-label">MySQL (dabba:3305)</span>
+      </div>
+
+      <!-- Schema Drawer Button -->
+      <button class="btn-schema-toggle" (click)="toggleSchema()" title="Explore Database Schema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="9" y1="3" x2="9" y2="21"></line>
+        </svg>
+        <span>Schema</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- Hero & Search Section -->
+    <section class="hero-search-section">
+      <div class="hero-badge">
+        <span class="badge-sparkle">✨</span> Intelligent Natural Language Database Search
+      </div>
+      <h1 class="hero-heading">Ask anything about your database.</h1>
+      <p class="hero-desc">
+        Your question is interpreted by <strong>Google Gemini</strong> in the <strong>Spring AI</strong> middle-layer, 
+        dispatched to the <strong>Spring Boot MCP Server</strong>, and queried directly against your <strong>MySQL</strong> schema.
+      </p>
+
+      <!-- Search Box Card -->
+      <div class="search-box-card glass-panel" [class.is-loading]="isLoading">
+        <div class="search-input-wrapper">
+          <div class="search-icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+
+          <input 
+            type="text" 
+            class="search-input" 
+            [(ngModel)]="searchQuery" 
+            (keyup.enter)="onSearch()"
+            [placeholder]="isSqlMode ? 'Enter raw SQL query (e.g. SELECT * FROM employee JOIN department ...)' : 'Ask in plain English (e.g. Who are the top 3 highest paid employees in Engineering?)'"
+          />
+
+          <button *ngIf="searchQuery" class="btn-clear-input" (click)="searchQuery = ''" title="Clear">
+            &times;
+          </button>
+
+          <button class="btn-search-submit" (click)="onSearch()" [disabled]="isLoading">
+            <span *ngIf="!isLoading">Search &bull; Enter</span>
+            <span *ngIf="isLoading" class="spinner"></span>
+          </button>
+        </div>
+
+        <!-- Mode Toggle & Hints -->
+        <div class="search-footer-meta">
+          <div class="mode-toggles">
+            <button 
+              class="mode-btn" 
+              [class.active]="!isSqlMode" 
+              (click)="isSqlMode = false">
+              ✨ Natural Language AI Mode
+            </button>
+            <button 
+              class="mode-btn" 
+              [class.active]="isSqlMode" 
+              (click)="isSqlMode = true">
+              ⚡ Direct SQL Mode
+            </button>
+          </div>
+
+          <div class="search-hint">
+            Press <kbd>Enter ↵</kbd> to execute
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="suggestions-container">
+        <span class="suggestions-label">Try asking:</span>
+        <div class="chips-scroller">
+          <button 
+            *ngFor="let suggestion of suggestedQueries" 
+            class="suggestion-chip" 
+            (click)="setQueryAndRun(suggestion)">
+            {{ suggestion }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div *ngIf="activeResponse && !activeResponse.success" class="error-banner glass-panel">
+      <div class="error-icon">⚠️</div>
+      <div class="error-content">
+        <h4>Query Execution Error</h4>
+        <p>{{ activeResponse.error }}</p>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <section *ngIf="activeResponse && activeResponse.success" class="results-section">
+      <div class="results-card glass-panel">
+        
+        <!-- Results Header & Metrics Bar -->
+        <div class="results-header">
+          <div class="results-metrics">
+            <span class="metric-badge metric-rows">
+              <strong>{{ activeResponse.rowCount || 0 }}</strong> rows retrieved
+            </span>
+            <span class="metric-badge metric-time">
+              ⏱️ <strong>{{ activeResponse.executionTimeMs }}ms</strong> total latency
+            </span>
+            <span class="metric-badge metric-model">
+              🤖 {{ activeResponse.model }}
+            </span>
+            <span class="metric-badge metric-mcp">
+              🔌 {{ activeResponse.mcpServer }}
+            </span>
+          </div>
+
+          <!-- Export Actions -->
+          <div class="results-actions">
+            <button class="btn-action" (click)="exportCsv()" [disabled]="!activeResponse.rows?.length">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Export CSV
+            </button>
+            <button class="btn-action" (click)="exportJson()" [disabled]="!activeResponse.rows?.length">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Export JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Result Tabs Navigation -->
+        <div class="results-tabs">
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'insights'" 
+            (click)="activeTab = 'insights'">
+            💡 AI Summary & Insights
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'table'" 
+            (click)="activeTab = 'table'">
+            📊 Interactive Data Table ({{ activeResponse.rowCount || 0 }})
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'sql'" 
+            (click)="activeTab = 'sql'">
+            ⚡ Executed SQL Query
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'json'" 
+            (click)="activeTab = 'json'">
+            &#123; &#125; Raw JSON
+          </button>
+        </div>
+
+        <!-- Tab 1: AI Summary & Insights -->
+        <div *ngIf="activeTab === 'insights'" class="tab-content insights-tab">
+          <div class="ai-answer-card">
+            <div class="ai-avatar-badge">
+              <span class="ai-spark">✨</span> Gemini AI Structured Analysis
+            </div>
+            <div class="ai-formatted-markdown" [innerHTML]="getFormattedMarkdown(activeResponse.answer)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Interactive Data Table -->
+        <div *ngIf="activeTab === 'table'" class="tab-content table-tab">
+          <div *ngIf="!activeResponse.rows || activeResponse.rows.length === 0" class="empty-table-state">
+            <p>No rows returned for this query.</p>
+          </div>
+
+          <div *ngIf="activeResponse.rows && activeResponse.rows.length > 0" class="table-responsive">
+            <table class="mcp-data-table">
+              <thead>
+                <tr>
+                  <th *ngFor="let col of activeResponse.columns">
+                    {{ col }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of activeResponse.rows">
+                  <td *ngFor="let col of activeResponse.columns">
+                    <!-- Format Currency -->
+                    <span *ngIf="isCurrency(col, row[col])" class="currency-cell">
+                      {{ formatCurrency(row[col]) }}
+                    </span>
+
+                    <!-- Format Status Badges -->
+                    <span *ngIf="col === 'status'" class="status-badge" [ngClass]="getStatusClass(row[col])">
+                      {{ row[col] }}
+                    </span>
+
+                    <!-- Standard Cell -->
+                    <span *ngIf="!isCurrency(col, row[col]) && col !== 'status'">
+                      {{ getCellValue(row, col) }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Executed SQL Query -->
+        <div *ngIf="activeTab === 'sql'" class="tab-content sql-tab">
+          <div class="sql-code-wrapper">
+            <div class="sql-code-header">
+              <span class="sql-tag">MySQL DQL</span>
+              <button class="btn-copy-sql" (click)="copySql()">
+                <span *ngIf="!copyFeedback">📋 Copy SQL</span>
+                <span *ngIf="copyFeedback" class="copied-feedback">✓ Copied!</span>
+              </button>
+            </div>
+            <pre class="sql-code-block"><code>{{ activeResponse.sql }}</code></pre>
+          </div>
+        </div>
+
+        <!-- Tab 4: Raw JSON Inspector -->
+        <div *ngIf="activeTab === 'json'" class="tab-content json-tab">
+          <pre class="json-code-block"><code>{{ activeResponse | json }}</code></pre>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Schema Explorer Drawer (Side Overlay) -->
+    <aside class="schema-drawer" [class.drawer-open]="isSchemaDrawerOpen">
+      <div class="drawer-header">
+        <h3>Database Schema: {{ databaseSchema?.database || 'dabba' }}</h3>
+        <button class="btn-close-drawer" (click)="isSchemaDrawerOpen = false">&times;</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Tables List -->
+        <div class="schema-section">
+          <h4>Active Tables</h4>
+          <div class="table-card" *ngFor="let t of databaseSchema?.tables">
+            <div class="table-card-head">
+              <span class="table-name">📄 {{ t.table_name }}</span>
+              <span class="table-engine">{{ t.engine }} &bull; ~{{ t.approx_rows }} rows</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee Table Columns -->
+        <div class="schema-section" *ngIf="databaseSchema?.employeeColumns">
+          <h4>Columns: <code>employee</code></h4>
+          <ul class="column-list">
+            <li *ngFor="let c of databaseSchema?.employeeColumns">
+              <span class="col-name">{{ c.column_name }}</span>
+              <span class="col-type">{{ c.column_type }}</span>
+              <span *ngIf="c.key === 'PRI'" class="key-badge key-pri">PK</span>
+              <span *ngIf="c.column_name === 'department_id'" class="key-badge key-fk">FK</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Department Table Columns -->
+        <div class="schema-section" *ngIf="databaseSchema?.departmentColumns">
+          <h4>Columns: <code>department</code></h4>
+          <ul class="column-list">
+            <li *ngFor="let c of databaseSchema?.departmentColumns">
+              <span class="col-name">{{ c.column_name }}</span>
+              <span class="col-type">{{ c.column_type }}</span>
+              <span *ngIf="c.key === 'PRI'" class="key-badge key-pri">PK</span>
+              <span *ngIf="c.key === 'UNI'" class="key-badge key-uni">UNI</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+</div>

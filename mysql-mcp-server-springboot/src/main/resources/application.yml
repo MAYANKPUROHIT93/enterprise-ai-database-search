@@ -1,0 +1,26 @@
+spring:
+  main:
+    banner-mode: "off" # Never print banner to stdout in MCP stdio mode
+  application:
+    name: mysql-mcp-server-springboot
+
+server:
+  port: ${SERVER_PORT:8085} # Port for HTTP / SSE transport (GET /mcp/sse, POST /mcp/message)
+
+mcp:
+  transport:
+    stdio:
+      enabled: ${MCP_STDIO_ENABLED:true} # Listens to System.in for JSON-RPC messages
+    sse:
+      enabled: ${MCP_SSE_ENABLED:true}   # Exposes /mcp/sse and /mcp/message
+
+mysql:
+  host: ${MYSQL_HOST:127.0.0.1}
+  port: ${MYSQL_PORT:3305}
+  user: ${MYSQL_USER:root}
+  password: ${MYSQL_PASSWORD:root}
+  database: ${MYSQL_DATABASE:dabba}
+  pool-limit: ${MYSQL_POOL_LIMIT:10}
+  max-rows: ${MYSQL_MAX_ROWS:1000}
+  query-timeout-ms: ${MYSQL_QUERY_TIMEOUT_MS:30000}
+  read-only: ${MYSQL_READ_ONLY:false}

@@ -1,0 +1,21 @@
+server:
+  port: ${SERVER_PORT:8090}
+
+spring:
+  application:
+    name: spring-ai-mcp-orchestrator
+
+gemini:
+  api-key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
+  primary-model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
+  fallback-models:
+    - gemini-flash-latest
+    - gemini-3.8-flash
+    - gemini-3.5-flash
+
+mcp:
+  server-url: ${MCP_SERVER_URL:http://127.0.0.1:8085/mcp/message}
+  database: ${MCP_DATABASE:dabba}
+
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,http://localhost:8080}
