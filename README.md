@@ -242,5 +242,6 @@ The Spring Boot MCP Server implements 16 native tools compliant with the **Model
 
 ## 📄 License & Attribution
 
-Developed with Google DeepMind Antigravity IDE.  
-Released under the **MIT License**.
+- **Developer**: **Mayank Sujat Purohit** ([@MAYANKPUROHIT93](https://github.com/MAYANKPUROHIT93))
+- **Environment**: Developed with Google DeepMind Antigravity IDE.  
+- **License**: Released under the **MIT License**.
