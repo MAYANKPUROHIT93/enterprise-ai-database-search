@@ -6,8 +6,11 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io/)
 [![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-4285F4.svg)](https://ai.google.dev/)
 [![MySQL](https://img.shields.io/badge/Database-MySQL%208.0-00758F.svg)](https://www.mysql.com/)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-MAYANKPUROHIT93%2Fenterprise--ai--database--search-181717.svg?logo=github)](https://github.com/MAYANKPUROHIT93/enterprise-ai-database-search)
 
 An enterprise-grade, four-tier **Natural Language Database Search Application**. Users can ask questions in plain English through an interactive **Angular 18** frontend. Queries are interpreted by a **Spring AI** middle layer powered by **Google Gemini**, routed through a dedicated **Spring Boot MySQL Model Context Protocol (MCP) Server**, executed against a **MySQL** database, and returned with structured Markdown insights and interactive data tables.
+
+**GitHub Repository**: [https://github.com/MAYANKPUROHIT93/enterprise-ai-database-search](https://github.com/MAYANKPUROHIT93/enterprise-ai-database-search)
 
 ---
 
